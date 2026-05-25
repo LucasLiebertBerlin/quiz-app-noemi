@@ -1,67 +1,68 @@
 // Vercel Serverless Function: /api/scores
-// Speichert Scores in Vercel KV (Upstash Redis).
-// Wenn KV nicht konfiguriert ist, fällt der Client automatisch auf localStorage zurück.
+// Speichert Scores in Upstash Redis (via Vercel Marketplace Integration).
+// Wenn Redis nicht konfiguriert ist, fällt der Client automatisch auf localStorage zurück.
 
-let kv = null;
+const { Redis } = require('@upstash/redis');
+
+let redis = null;
 try {
-    // Optionaler Import – wenn @vercel/kv nicht installiert oder ENV fehlt, gibt API 503 zurück
-    // und der Client nutzt localStorage als Fallback.
-    kv = require('@vercel/kv').kv;
+    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
+        redis = new Redis({
+            url: process.env.KV_REST_API_URL,
+            token: process.env.KV_REST_API_TOKEN
+        });
+    }
 } catch (e) {
-    kv = null;
+    redis = null;
 }
 
 const KEY = 'nutriquiz:scores';
 const MAX_SCORES = 500; // hartes Limit gegen Spam
 
 module.exports = async function handler(req, res) {
-    // CORS (optional – falls von woanders abgerufen)
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cache-Control', 'no-store');
 
-    if (req.method === 'OPTIONS') {
-        return res.status(204).end();
-    }
+    if (req.method === 'OPTIONS') return res.status(204).end();
 
-    // Prüfe, ob KV verfügbar
-    if (!kv || !process.env.KV_REST_API_URL) {
+    if (!redis) {
         return res.status(503).json({
-            error: 'Scoreboard-API nicht konfiguriert. Client nutzt localStorage als Fallback.',
+            error: 'Scoreboard-API nicht konfiguriert (Redis fehlt).',
             scores: []
         });
     }
 
     try {
         if (req.method === 'GET') {
-            const raw = await kv.get(KEY);
+            const raw = await redis.get(KEY);
             const scores = Array.isArray(raw) ? raw : [];
             return res.status(200).json({ scores });
         }
 
         if (req.method === 'POST') {
-            const body = req.body || {};
+            const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
             const entry = sanitize(body);
             if (!entry) return res.status(400).json({ error: 'Ungültige Daten' });
 
-            const raw = await kv.get(KEY);
+            const raw = await redis.get(KEY);
             const scores = Array.isArray(raw) ? raw : [];
             scores.push(entry);
 
-            // Cap auf MAX_SCORES (älteste raus)
             if (scores.length > MAX_SCORES) {
                 scores.sort((a, b) => (b.ts || 0) - (a.ts || 0));
                 scores.length = MAX_SCORES;
             }
 
-            await kv.set(KEY, scores);
+            await redis.set(KEY, scores);
             return res.status(200).json({ ok: true });
         }
 
         return res.status(405).json({ error: 'Method not allowed' });
     } catch (err) {
-        console.error(err);
-        return res.status(500).json({ error: 'Server-Fehler', scores: [] });
+        console.error('scores api error', err);
+        return res.status(500).json({ error: 'Server-Fehler', message: String(err && err.message || err), scores: [] });
     }
 };
 
