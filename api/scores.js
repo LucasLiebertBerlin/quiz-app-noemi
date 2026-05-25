@@ -18,10 +18,11 @@ try {
 
 const KEY = 'nutriquiz:scores';
 const MAX_SCORES = 500; // hartes Limit gegen Spam
+const RESET_TOKEN = process.env.RESET_TOKEN || 'noemi2026'; // Passwort zum Leeren
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Cache-Control', 'no-store');
 
@@ -57,6 +58,16 @@ module.exports = async function handler(req, res) {
 
             await redis.set(KEY, scores);
             return res.status(200).json({ ok: true });
+        }
+
+        if (req.method === 'DELETE') {
+            const url = new URL(req.url, 'http://x');
+            const token = url.searchParams.get('token');
+            if (token !== RESET_TOKEN) {
+                return res.status(401).json({ error: 'Falsches Passwort' });
+            }
+            await redis.del(KEY);
+            return res.status(200).json({ ok: true, message: 'Scoreboard geleert' });
         }
 
         return res.status(405).json({ error: 'Method not allowed' });

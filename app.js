@@ -224,6 +224,17 @@ const Scoreboard = (() => {
         } catch (e) { return []; }
     }
 
+    async function clearScores(token) {
+        try {
+            const res = await fetch('/api/scores?token=' + encodeURIComponent(token), { method: 'DELETE' });
+            if (res.ok) return { ok: true };
+            const data = await res.json().catch(() => ({}));
+            return { ok: false, error: data.error || 'Fehler' };
+        } catch (e) {
+            return { ok: false, error: 'Netzwerkfehler' };
+        }
+    }
+
     async function addScore(entry) {
         if (useApi) {
             try {
@@ -256,7 +267,11 @@ const Scoreboard = (() => {
         return copy;
     }
 
-    return { fetchScores, addScore, sortBy };
+    function clearLocal() {
+        localStorage.removeItem(LOCAL_KEY);
+    }
+
+    return { fetchScores, addScore, sortBy, clearScores, clearLocal };
 })();
 
 // ============================================================
@@ -322,7 +337,7 @@ async function renderStart() {
         <input id="name-input" class="input" type="text" placeholder="Dein Name" maxlength="20" autocomplete="off">
         <button id="start-btn" class="btn btn-primary" disabled>Quiz starten →</button>
         <div class="scoreboard">
-            <h2 style="margin-top:32px;">🏆 Bestenliste</h2>
+            <h2 id="board-title" style="margin-top:32px;cursor:default;user-select:none;" title="Doppelklick zum Leeren (Admin)">🏆 Bestenliste</h2>
             <div class="scoreboard-tabs">
                 <button class="tab active" data-mode="top">Top Score</button>
                 <button class="tab" data-mode="time">Schnellste</button>
@@ -386,6 +401,24 @@ async function renderStart() {
             paintList();
         });
     });
+
+    // Versteckter Admin-Reset: Doppelklick auf "Bestenliste"
+    const boardTitle = card.querySelector('#board-title');
+    if (boardTitle) {
+        boardTitle.addEventListener('dblclick', async () => {
+            const pw = prompt('Passwort zum Leeren der Bestenliste eingeben:');
+            if (!pw) return;
+            if (!confirm('Wirklich ALLE Scores online löschen? Das kann nicht rückgängig gemacht werden.')) return;
+            const r = await Scoreboard.clearScores(pw);
+            Scoreboard.clearLocal();
+            if (r.ok) {
+                alert('✓ Scoreboard geleert!');
+                renderStart();
+            } else {
+                alert('Fehler: ' + r.error);
+            }
+        });
+    }
 }
 
 function escapeHtml(s) {
