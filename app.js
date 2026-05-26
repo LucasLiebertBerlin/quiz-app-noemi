@@ -371,9 +371,9 @@ async function renderStart() {
 
     const card = el('div', { class: 'card' });
     card.innerHTML = `
-        <div class="eyebrow">NutriQuiz · 20 Fragen</div>
+        <div class="eyebrow">NutriQuiz · 25 Fragen</div>
         <h1>Wer weiß am meisten über Ernährung?</h1>
-        <p class="subtitle">Beantworte 20 Fragen so schnell und genau wie möglich. Punkte und Zeit landen im Scoreboard.</p>
+        <p class="subtitle">Beantworte 25 Fragen so schnell und genau wie möglich. Punkte und Zeit landen im Scoreboard.</p>
         <input id="name-input" class="input" type="text" placeholder="Dein Name" maxlength="20" autocomplete="off">
         <button id="start-btn" class="btn btn-primary" disabled>Quiz starten →</button>
         <div class="scoreboard">
