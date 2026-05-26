@@ -166,8 +166,8 @@ const QUESTIONS = [
     {
         q: "Welche Faktoren beeinflussen den Energieverbrauch des Körpers? (Mehrfachauswahl)",
         options: ["Muskelmasse", "Alter", "Bewegung", "Stoffwechselaktivität"],
-        correct: [0, 1, 2, 3],
-        explain: "Mehr Muskelmasse = mehr Grundumsatz. Mit sinkendem Alter sinkt der Umsatz. Bewegung erhöht den Verbrauch. Stoffwechselaktivität ist individuell unterschiedlich.",
+        correct: [0, 1, 2],
+        explain: "Mehr Muskelmasse = mehr Grundumsatz. Mit sinkendem Alter sinkt der Umsatz. Bewegung erhöht den Verbrauch.",
         multi: true
     },
     {
