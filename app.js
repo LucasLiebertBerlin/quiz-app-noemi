@@ -136,6 +136,44 @@ const QUESTIONS = [
         ],
         correct: [1],
         explain: "Ballaststoffe verlangsamen die Verdauung und halten den Blutzucker stabil."
+    },
+    {
+        q: "Welcher Nährstoff verschlechtert bei dauerhaft erhöhter Aufnahme die Insulinempfindlichkeit?",
+        options: ["Ballaststoffe", "Zucker", "Eiweiß", "Wasser"],
+        correct: [1],
+        explain: "Zu viel Zucker führt zu Insulinresistenz – das Risiko für Diabetes, Herz-Kreislauf-Erkrankungen, Fettleber, Nierenschäden und bestimmte Krebsarten steigt."
+    },
+    {
+        q: "Welche Aussagen über Mikronährstoffe treffen zu? (Mehrfachauswahl)",
+        options: [
+            "Fettlösliche Vitamine können im Körper gespeichert werden",
+            "Wasserlösliche Vitamine werden immer vollständig gespeichert",
+            "Ein Mineralstoffmangel kann Körperfunktionen beeinträchtigen",
+            "Vitamine liefern direkt Energie wie Fett oder Kohlenhydrate"
+        ],
+        correct: [0, 2],
+        explain: "Fettlösliche Vitamine (A, D, E, K) speichert der Körper. Wasserlösliche Vitamine (B, C) werden überwiegend ausgeschieden. Vitamine liefern keine Energie, sie unterstützen aber den Stoffwechsel.",
+        multi: true
+    },
+    {
+        q: "Was enthält eine Ernährung mit vielen stark verarbeiteten Lebensmitteln meist zu viel? (Mehrfachauswahl)",
+        options: ["Ballaststoffe", "Zucker", "Salz", "gesättigte Fette", "Vitamine", "Mineralstoffe"],
+        correct: [1, 2, 3],
+        explain: "Verarbeitete Lebensmittel sind oft reich an Zucker, Salz und gesättigten Fetten, aber arm an Ballaststoffen, Vitaminen und Mineralstoffen.",
+        multi: true
+    },
+    {
+        q: "Welche Faktoren beeinflussen den Energieverbrauch des Körpers? (Mehrfachauswahl)",
+        options: ["Muskelmasse", "Alter", "Bewegung", "Stoffwechselaktivität"],
+        correct: [0, 1, 2, 3],
+        explain: "Mehr Muskelmasse = mehr Grundumsatz. Mit sinkendem Alter sinkt der Umsatz. Bewegung erhöht den Verbrauch. Stoffwechselaktivität ist individuell unterschiedlich.",
+        multi: true
+    },
+    {
+        q: "Ein dauerhaft erhöhter Konsum gesättigter Fettsäuren kann welche Konzentration im Blut erhöhen?",
+        options: ["HDL (gutes Cholesterin)", "LDL (schlechtes Cholesterin)", "Vitamin D", "Eisen"],
+        correct: [1],
+        explain: "Gesättigte Fettsäuren erhöhen LDL-Cholesterin – das Risiko für Arteriosklerose, Herzinfarkt, Schlaganfall, Fettleber und Bluthochdruck steigt."
     }
 ];
 
