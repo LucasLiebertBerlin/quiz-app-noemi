@@ -138,10 +138,11 @@ const QUESTIONS = [
         explain: "Ballaststoffe verlangsamen die Verdauung und halten den Blutzucker stabil."
     },
     {
-        q: "Welcher Nährstoff verschlechtert bei dauerhaft erhöhter Aufnahme die Insulinempfindlichkeit?",
-        options: ["Ballaststoffe", "Zucker", "Eiweiß", "Wasser"],
-        correct: [1],
-        explain: "Zu viel Zucker führt zu Insulinresistenz – das Risiko für Diabetes, Herz-Kreislauf-Erkrankungen, Fettleber, Nierenschäden und bestimmte Krebsarten steigt."
+        type: "puzzle",
+        text: "Eine dauerhaft erhöhte Aufnahme von {0} kann dazu führen, dass sich die Insulinempfindlichkeit der Körperzellen verschlechtert. Dadurch steigt langfristig das Risiko für {1}, {2}, {3}, {4} und {5}.",
+        items: ["Zucker", "Diabetes Typ 2", "Übergewicht", "Bluthochdruck", "Herz-Kreislauf-Erkrankungen", "Fettleber"],
+        correct: [0, 1, 2, 3, 4, 5],
+        explain: "Zucker führt zu Insulinresistenz – das Risiko für Diabetes Typ 2, Übergewicht, Bluthochdruck, Herz-Kreislauf-Erkrankungen und Fettleber steigt."
     },
     {
         q: "Welche Aussagen über Mikronährstoffe treffen zu? (Mehrfachauswahl)",
@@ -156,11 +157,11 @@ const QUESTIONS = [
         multi: true
     },
     {
-        q: "Was enthält eine Ernährung mit vielen stark verarbeiteten Lebensmitteln meist zu viel? (Mehrfachauswahl)",
-        options: ["Ballaststoffe", "Zucker", "Salz", "gesättigte Fette", "Vitamine", "Mineralstoffe"],
-        correct: [1, 2, 3],
-        explain: "Verarbeitete Lebensmittel sind oft reich an Zucker, Salz und gesättigten Fetten, aber arm an Ballaststoffen, Vitaminen und Mineralstoffen.",
-        multi: true
+        type: "puzzle",
+        text: "Werden über längere Zeit überwiegend stark verarbeitete Lebensmittel konsumiert, enthält die Ernährung häufig zu viel {0}, {1} und {2}, gleichzeitig aber zu wenig {3} und {4}.",
+        items: ["Zucker", "Salz", "ungesunde Fette", "Ballaststoffe", "Vitamine"],
+        correct: [0, 1, 2, 3, 4],
+        explain: "Verarbeitete Lebensmittel sind oft reich an Zucker, Salz und ungesunden Fetten, aber arm an Ballaststoffen und Vitaminen."
     },
     {
         q: "Welche Faktoren beeinflussen den Energieverbrauch des Körpers? (Mehrfachauswahl)",
@@ -170,10 +171,11 @@ const QUESTIONS = [
         multi: true
     },
     {
-        q: "Ein dauerhaft erhöhter Konsum gesättigter Fettsäuren kann welche Konzentration im Blut erhöhen?",
-        options: ["HDL (gutes Cholesterin)", "LDL (schlechtes Cholesterin)", "Vitamin D", "Eisen"],
-        correct: [1],
-        explain: "Gesättigte Fettsäuren erhöhen LDL-Cholesterin – das Risiko für Arteriosklerose, Herzinfarkt, Schlaganfall, Fettleber und Bluthochdruck steigt."
+        type: "puzzle",
+        text: "Ein dauerhaft erhöhter Konsum gesättigter Fettsäuren kann die Konzentration von {0} im Blut erhöhen. Dadurch steigt unter anderem das Risiko für {1}, {2}, {3}, {4} und {5}.",
+        items: ["LDL-Cholesterin", "Arteriosklerose", "Bluthochdruck", "Herzinfarkt", "Schlaganfall", "Herz-Kreislauf-Erkrankungen"],
+        correct: [0, 1, 2, 3, 4, 5],
+        explain: "Gesättigte Fettsäuren erhöhen LDL-Cholesterin – das Risiko für Arteriosklerose, Bluthochdruck, Herzinfarkt, Schlaganfall und Herz-Kreislauf-Erkrankungen steigt."
     }
 ];
 
@@ -481,6 +483,15 @@ function renderQuestion() {
             <div class="progress-bar"><div class="progress-fill" style="width:${((State.current) / QUESTIONS.length) * 100}%"></div></div>
             <div class="timer">⏱ <strong id="live-timer">${formatTime(elapsed)}</strong></div>
         </div>
+        ${q.type === 'puzzle' ? `
+        <div class="puzzle-banner">
+            <div class="puzzle-banner-icon">🧩</div>
+            <div class="puzzle-banner-text">
+                <div class="puzzle-banner-title">PUZZLE</div>
+                <div class="puzzle-banner-sub">Klicke auf einen Begriff, dann auf die passende Lücke</div>
+            </div>
+        </div>
+        ` : ''}
         ${q.multi ? `
         <div class="multi-banner">
             <div class="multi-banner-icon">☑️</div>
@@ -490,10 +501,9 @@ function renderQuestion() {
             </div>
         </div>
         ` : ''}
-        <div class="question-text">${escapeHtml(q.q.replace(/\s*\(Mehrfachauswahl\)\s*/i, ''))}</div>
-        <div id="options" class="options${q.multi ? ' multi' : ''}"></div>
+        <div id="question-area"></div>
         <div id="feedback-slot"></div>
-        <button id="confirm-btn" class="btn btn-primary" disabled>${q.multi ? 'Auswahl bestätigen' : 'Antwort wählen'}</button>
+        <button id="confirm-btn" class="btn btn-primary" disabled>${q.multi ? 'Auswahl bestätigen' : (q.type === 'puzzle' ? 'Lösung prüfen' : 'Antwort wählen')}</button>
     `;
     app.appendChild(card);
 
@@ -504,8 +514,160 @@ function renderQuestion() {
         if (t) t.textContent = formatTime(Date.now() - State.startTime);
     }, 500);
 
-    const optionsEl = card.querySelector('#options');
+    const questionArea = card.querySelector('#question-area');
     const confirmBtn = card.querySelector('#confirm-btn');
+
+    // PUZZLE-Typ
+    if (q.type === 'puzzle') {
+        // Puzzle-Logik
+        const slotAssignments = new Map(); // slotIndex -> itemIndex
+        const itemAssignments = new Map(); // itemIndex -> slotIndex (oder null)
+        let selectedItem = null;
+
+        // Text mit Slots rendern
+        const parts = q.text.split(/(\{\d+\})/);
+        let html = '<div class="puzzle-text">';
+        let slotIdx = 0;
+        parts.forEach(part => {
+            if (part.match(/^\{\d+\}$/)) {
+                html += `<span class="puzzle-slot" data-slot="${slotIdx}" data-idx="${part}">______</span>`;
+                slotIdx++;
+            } else {
+                html += escapeHtml(part);
+            }
+        });
+        html += '</div>';
+        html += '<div id="puzzle-items" class="puzzle-items"></div>';
+        questionArea.innerHTML = html;
+
+        const slotsEl = questionArea.querySelectorAll('.puzzle-slot');
+        const itemsEl = questionArea.querySelector('#puzzle-items');
+
+        // Items mischen und rendern
+        const shuffled = [...q.items].map((item, i) => ({ item, originalIdx: i }));
+        shuffled.sort(() => Math.random() - 0.5);
+
+        shuffled.forEach(({ item, originalIdx }) => {
+            const itemEl = el('div', { class: 'puzzle-item', 'data-idx': originalIdx }, [item]);
+            itemEl.addEventListener('click', () => {
+                if (answered) return;
+                Sound.click();
+                if (itemAssignments.has(originalIdx)) {
+                    // Item bereits in Slot → zurückholen
+                    const slotIdx = itemAssignments.get(originalIdx);
+                    const slot = slotsEl[slotIdx];
+                    slot.textContent = '______';
+                    slot.classList.remove('filled', 'selected');
+                    itemAssignments.delete(originalIdx);
+                    slotAssignments.delete(slotIdx);
+                    itemEl.classList.remove('used');
+                } else {
+                    // Item auswählen
+                    document.querySelectorAll('.puzzle-item').forEach(el => el.classList.remove('selected'));
+                    itemEl.classList.add('selected');
+                    selectedItem = originalIdx;
+                }
+            });
+            itemsEl.appendChild(itemEl);
+        });
+
+        // Slots klickbar
+        slotsEl.forEach((slot, slotIdx) => {
+            slot.addEventListener('click', () => {
+                if (answered) return;
+                Sound.click();
+                if (selectedItem !== null) {
+                    // Item in Slot platzieren
+                    // Falls Slot schon belegt: altes Item zurückholen
+                    if (slotAssignments.has(slotIdx)) {
+                        const oldItemIdx = slotAssignments.get(slotIdx);
+                        const oldItemEl = itemsEl.querySelector(`[data-idx="${oldItemIdx}"]`);
+                        if (oldItemEl) oldItemEl.classList.remove('used');
+                        itemAssignments.delete(oldItemIdx);
+                    }
+                    // Neues Item platzieren
+                    slot.textContent = q.items[selectedItem];
+                    slot.classList.add('filled');
+                    itemAssignments.set(selectedItem, slotIdx);
+                    slotAssignments.set(slotIdx, selectedItem);
+                    const itemEl = itemsEl.querySelector(`[data-idx="${selectedItem}"]`);
+                    if (itemEl) {
+                        itemEl.classList.remove('selected');
+                        itemEl.classList.add('used');
+                    }
+                    selectedItem = null;
+                } else if (slot.classList.contains('filled')) {
+                    // Slot leeren
+                    const itemIdx = slotAssignments.get(slotIdx);
+                    const itemEl = itemsEl.querySelector(`[data-idx="${itemIdx}"]`);
+                    if (itemEl) itemEl.classList.remove('used');
+                    slot.textContent = '______';
+                    slot.classList.remove('filled');
+                    itemAssignments.delete(itemIdx);
+                    slotAssignments.delete(slotIdx);
+                }
+                // Button aktivieren wenn alle Slots gefüllt
+                const allFilled = Array.from(slotsEl).every(s => s.classList.contains('filled'));
+                confirmBtn.disabled = !allFilled;
+            });
+        });
+
+        function handleConfirm() {
+            if (answered) return;
+            answered = true;
+
+            // Prüfen ob alle Slots korrekt gefüllt
+            let correctCount = 0;
+            slotsEl.forEach((slot, slotIdx) => {
+                const itemIdx = slotAssignments.get(slotIdx);
+                const isCorrect = itemIdx === q.correct[slotIdx];
+                if (isCorrect) correctCount++;
+                slot.classList.add(isCorrect ? 'correct' : 'wrong');
+                // Items markieren
+                const itemEl = itemsEl.querySelector(`[data-idx="${itemIdx}"]`);
+                if (itemEl) itemEl.classList.add(isCorrect ? 'correct' : 'wrong');
+            });
+
+            const isAllCorrect = correctCount === slotsEl.length;
+
+            // Feedback
+            const feedback = el('div', { class: `feedback ${isAllCorrect ? 'correct' : 'wrong'}` });
+            feedback.innerHTML = `
+                <div class="feedback-icon">${isAllCorrect ? '✓' : '✕'}</div>
+                <div class="feedback-text">
+                    <strong>${isAllCorrect ? 'Richtig!' : `${correctCount}/${slotsEl.length} richtig`}</strong>
+                    <small>${escapeHtml(q.explain)}</small>
+                </div>
+            `;
+            card.querySelector('#feedback-slot').appendChild(feedback);
+
+            if (isAllCorrect) { Sound.correct(); State.score++; }
+            else Sound.wrong();
+
+            State.answers.push({ q: State.current, picked: Array.from(slotAssignments.values()), correct: isAllCorrect });
+
+            confirmBtn.textContent = State.current < QUESTIONS.length - 1 ? 'Nächste Frage →' : 'Ergebnis anzeigen →';
+            confirmBtn.disabled = false;
+            confirmBtn.onclick = () => {
+                Sound.click();
+                State.current++;
+                if (State.current >= QUESTIONS.length) renderResult();
+                else renderQuestion();
+            };
+        }
+
+        confirmBtn.addEventListener('click', () => {
+            if (!answered) handleConfirm();
+        });
+
+        return;
+    }
+
+    // STANDARD Multiple Choice
+    const optionsEl = el('div', { class: `options${q.multi ? ' multi' : ''}` });
+    questionArea.appendChild(el('div', { class: 'question-text' }, [escapeHtml(q.q.replace(/\s*\(Mehrfachauswahl\)\s*/i, ''))]));
+    questionArea.appendChild(optionsEl);
+
     const letters = ['A', 'B', 'C', 'D', 'E'];
 
     q.options.forEach((opt, i) => {
